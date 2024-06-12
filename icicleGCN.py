@@ -25,7 +25,9 @@ from collections import Counter
 
 
 class AE(nn.Module):  # autoencoder
-
+    '''
+    这里的编码器和第一个训练阶段（train.py）一样，不同点在于输出不仅有潜在空间特征和重构特征，还有编码器中间过程的特征
+    '''
     def __init__(self, n_enc_1, n_enc_2, n_enc_3, n_dec_1, n_dec_2, n_dec_3,
                  n_input, n_z):
         super(AE, self).__init__()
@@ -49,12 +51,16 @@ class AE(nn.Module):  # autoencoder
         dec_h2 = F.relu(self.dec_2(dec_h1))
         dec_h3 = F.relu(self.dec_3(dec_h2))
         x_bar = self.x_bar_layer(dec_h3)
-
+        '''
+        返回值多了三个编码器中间过程的特征
+        '''
         return x_bar, enc_h1, enc_h2, enc_h3, z
 
 
 class IcicleGCN(nn.Module):
-
+    '''
+    因为要调用上边的编码器，所以输入参数为簇的数量，可选参数v，以及自编码器的参数
+    '''
     def __init__(self, n_enc_1, n_enc_2, n_enc_3, n_dec_1, n_dec_2, n_dec_3,
                  n_input, n_z, n_clusters, v=1):
         super(IcicleGCN, self).__init__()
@@ -125,6 +131,7 @@ class IcicleGCN(nn.Module):
         q = q.pow((self.v + 1.0) / 2.0)
         q = (q.t() / torch.sum(q, 1)).t()
 
+        '''重构的特征、权重矩阵、两个邻接矩阵的预测结果以及潜在空间的表示。'''
         return x_bar, q, predict1, predict2, z
 
 
@@ -155,14 +162,19 @@ def train_icicleGCN(dataset):
     data = torch.Tensor(dataset.x).to(device)
     y = dataset.y
     with torch.no_grad():
+        '''嵌入特征'''
         _, _, _, _, z = model.ae(data)
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=20)
     y_pred = kmeans.fit_predict(z.data.cpu().numpy())
+    '''将 KMeans 算法得到的聚类中心设置为模型的 cluster_layer 参数。'''
     model.cluster_layer.data = torch.tensor(kmeans.cluster_centers_).to(device)
     eva(y, y_pred, 'pae')  # evaluation
 
     fname = 'icicleGCN_result/ImageNet-10/{}_1_.txt'.format(args.name)
 
+    '''
+    Q,Z1,Z2,P分别存储四种预测的准确率
+    '''
     f = open(fname, 'w')
     epoch_list = []
     Q_list = []

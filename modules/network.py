@@ -6,6 +6,10 @@ import torch.nn.functional as F
 
 
 class Encoder(nn.Module):
+    '''
+    参数为编码层，解码层的维度，输入层的大小，潜在空间的维度
+    输出为潜在空间表示，输入数据的重构
+    '''
     def __init__(self, n_enc_1, n_enc_2, n_enc_3, n_dec_1, n_dec_2, n_dec_3,
                  n_input, n_z):
         super(Encoder, self).__init__()
@@ -34,6 +38,7 @@ class Encoder(nn.Module):
 
 
 class Network(nn.Module):
+    '''它接收三个参数：resnet（一个预训练的ResNet模型），feature_dim（特征维度的大小），class_num（类别的数量）。'''
     def __init__(self, resnet, feature_dim, class_num):
         super(Network, self).__init__()
         self.resnet = resnet
@@ -57,15 +62,20 @@ class Network(nn.Module):
         )
 
     def forward(self, x_i, x_j):
+        '''经过卷积网络'''
         h_i = self.resnet(x_i)
         h_j = self.resnet(x_j)
 
+        '''实例级投影器'''
         z_i = normalize(self.instance_projector(h_i), dim=1)
         z_j = normalize(self.instance_projector(h_j), dim=1)
 
+        '''经过编码器'''
         c_i,bar_i = self.enc(h_i)
+        '''这里应该是写错了，应该是h_j'''
         c_j, _     = self.enc(h_i)
 
+        '''返回两个投影后的特征，经过编码器的嵌入特征，经过卷积网络的h_i特征，和h_i的重构特征'''
         return z_i, z_j, c_i, c_j, h_i, bar_i
 
 
